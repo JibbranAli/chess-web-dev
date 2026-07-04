@@ -3,205 +3,262 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Single-File Chess Game</title>
+    <title>Retro Snake Game</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #2f3542;
+            background-color: #1e222b;
             color: #ffffff;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
+            overflow: hidden;
         }
 
         .game-container {
             text-align: center;
         }
 
-        h2 {
-            margin-bottom: 5px;
-        }
-
-        #turn-indicator {
-            margin-bottom: 15px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #f1f2f6;
-        }
-
-        #chessboard {
-            display: grid;
-            grid-template-columns: repeat(8, 70px);
-            grid-template-rows: repeat(8, 70px);
-            border: 4px solid #1e222b;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        }
-
-        .square {
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        h1 {
+            margin: 0 0 10px 0;
             font-size: 2.5rem;
-            cursor: pointer;
-            user-select: none;
-            transition: background-color 0.2s;
+            letter-spacing: 2px;
+            color: #4cd137;
+            text-shadow: 0 0 10px rgba(76, 209, 55, 0.4);
         }
 
-        /* Board Colors */
-        .light {
-            background-color: #f0d9b5;
+        .score-board {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            font-weight: bold;
         }
 
-        .dark {
-            background-color: #b58863;
+        #score {
+            color: #4cd137;
         }
 
-        /* States */
-        .square.selected {
-            background-color: #7ab873 !important;
+        #high-score {
+            color: #eccc68;
+            margin-left: 20px;
+        }
+
+        canvas {
+            background-color: #2f3542;
+            border: 4px solid #747d8c;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border-radius: 4px;
+        }
+
+        .controls-hint {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #a4b0be;
         }
     </style>
 </head>
 <body>
 
     <div class="game-container">
-        <h2>Chess Game</h2>
-        <div id="turn-indicator">White's Turn</div>
-        <div id="chessboard"></div>
+        <h1>SNAKE</h1>
+        <div class="score-board">
+            Score: <span id="score">0</span>
+            High Score: <span id="high-score">0</span>
+        </div>
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        <div class="controls-hint">Use Arrow Keys to Move. Press Space to Restart if you crash.</div>
     </div>
 
     <script>
-        // Initial board setup layout
-        const initialBoard = [
-            ['♜', '♞', '♝', '♛', '♚', '♝', '♞', '♜'], // Row 0 (Black pieces)
-            ['♟', '♟', '♟', '♟', '♟', '♟', '♟', '♟'], // Row 1
-            ['', '', '', '', '', '', '', ''],         // Row 2
-            ['', '', '', '', '', '', '', ''],         // Row 3
-            ['', '', '', '', '', '', '', ''],         // Row 4
-            ['', '', '', '', '', '', '', ''],         // Row 5
-            ['♙', '♙', '♙', '♙', '♙', '♙', '♙', '♙'], // Row 6
-            ['♖', '♘', '♗', '♕', '♔', '♗', '♘', '♖']  // Row 7 (White pieces)
-        ];
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreElement = document.getElementById("score");
+        const highScoreElement = document.getElementById("high-score");
 
-        // Tracking state
-        let boardState = JSON.parse(JSON.stringify(initialBoard));
-        let currentTurn = 'white'; 
-        let selectedSquare = null;
+        // Grid size configuration
+        const gridSize = 20; 
+        const tileCount = canvas.width / gridSize;
 
-        const chessboardElement = document.getElementById('chessboard');
-        const turnIndicator = document.getElementById('turn-indicator');
+        // Game speed variables
+        const initialSpeed = 7; // frames per second (lower = slower)
+        let gameSpeed = initialSpeed;
 
-        // Helper to determine piece color
-        function getPieceColor(piece) {
-            if (!piece) return null;
-            const whitePieces = ['♙', '♖', '♘', '♗', '♕', '♔'];
-            return whitePieces.includes(piece) ? 'white' : 'black';
-        }
+        // Game states
+        let snake = [];
+        let apple = { x: 0, y: 0 };
+        let dx = gridSize; // horizontal velocity
+        let dy = 0;        // vertical velocity
+        let score = 0;
+        let highScore = localStorage.getItem("snakeHighScore") || 0;
+        let gameOver = false;
+        let gameInterval;
 
-        // Generate board elements inside DOM
-        function renderBoard() {
-            chessboardElement.innerHTML = '';
+        highScoreElement.textContent = highScore;
+
+        // Start the game setup
+        resetGame();
+
+        function resetGame() {
+            // Spawn snake in the middle moving right
+            snake = [
+                { x: gridSize * 5, y: gridSize * 10 },
+                { x: gridSize * 4, y: gridSize * 10 },
+                { x: gridSize * 3, y: gridSize * 10 }
+            ];
+            dx = gridSize;
+            dy = 0;
+            score = 0;
+            gameSpeed = initialSpeed;
+            scoreElement.textContent = score;
+            gameOver = false;
             
-            for (let row = 0; row < 8; row++) {
-                for (let col = 0; col < 8; col++) {
-                    const square = document.createElement('div');
-                    square.classList.add('square');
-                    
-                    // Alternating tile backgrounds
-                    if ((row + col) % 2 === 0) {
-                        square.classList.add('light');
-                    } else {
-                        square.classList.add('dark');
-                    }
-                    
-                    // Set dataset attributes for tracking coordinates
-                    square.dataset.row = row;
-                    square.dataset.col = col;
-                    
-                    // Inject piece symbols
-                    square.textContent = boardState[row][col];
-                    
-                    // Apply text colors based on team
-                    if (getPieceColor(boardState[row][col]) === 'white') {
-                        square.style.color = '#ffffff'; 
-                        square.style.filter = 'drop-shadow(0px 2px 2px rgba(0,0,0,0.6))';
-                    } else if (getPieceColor(boardState[row][col]) === 'black') {
-                        square.style.color = '#000000';
-                    }
+            spawnApple();
+            
+            clearInterval(gameInterval);
+            gameInterval = setInterval(gameLoop, 1000 / gameSpeed);
+        }
 
-                    // Click Handler
-                    square.addEventListener('click', () => handleSquareClick(row, col));
-                    
-                    chessboardElement.appendChild(square);
+        function gameLoop() {
+            if (gameOver) return;
+
+            updateSnakePosition();
+            if (checkCollision()) {
+                endGame();
+                return;
+            }
+            checkAppleConsumption();
+            drawGrid();
+        }
+
+        function updateSnakePosition() {
+            // Create a new head based on velocity direction
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+            snake.unshift(head); // Add new head to front
+            snake.pop();         // Remove tail to keep length consistent unless apple is eaten
+        }
+
+        function checkCollision() {
+            const head = snake[0];
+
+            // Wall Collisions
+            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+                return true;
+            }
+
+            // Self Collisions (skip checking index 0 which is the head itself)
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function checkAppleConsumption() {
+            const head = snake[0];
+            if (head.x === apple.x && head.y === apple.y) {
+                score += 10;
+                scoreElement.textContent = score;
+                
+                // Grow snake by restoring the popped tail spot implicitly
+                // dynamically pushing a clone of the last segment
+                snake.push({ ...snake[snake.length - 1] });
+                
+                spawnApple();
+                increaseSpeed();
+            }
+        }
+
+        function spawnApple() {
+            // Generate a random spot inside grid boundaries
+            apple.x = Math.floor(Math.random() * tileCount) * gridSize;
+            apple.y = Math.floor(Math.random() * tileCount) * gridSize;
+
+            // Prevent apple from spawning right on top of the snake body
+            for (let segment of snake) {
+                if (apple.x === segment.x && apple.y === segment.y) {
+                    spawnApple();
+                    break;
                 }
             }
         }
 
-        function handleSquareClick(row, col) {
-            const piece = boardState[row][col];
-            const pieceColor = getPieceColor(piece);
-
-            // 1. If no piece is currently selected
-            if (selectedSquare === null) {
-                if (piece && pieceColor === currentTurn) {
-                    selectedSquare = { row, col };
-                    highlightSquare(row, col, true);
-                }
-            } 
-            // 2. If a piece is already selected
-            else {
-                const prevRow = selectedSquare.row;
-                const prevCol = selectedSquare.col;
-
-                // If clicking the same team piece, switch selection to that piece instead
-                if (piece && pieceColor === currentTurn) {
-                    highlightSquare(prevRow, prevCol, false);
-                    selectedSquare = { row, col };
-                    highlightSquare(row, col, true);
-                    return;
-                }
-
-                // If clicking the exact same square, deselect it
-                if (prevRow === row && prevCol === col) {
-                    highlightSquare(prevRow, prevCol, false);
-                    selectedSquare = null;
-                    return;
-                }
-
-                // Execute Move
-                boardState[row][col] = boardState[prevRow][prevCol];
-                boardState[prevRow][prevCol] = '';
-                
-                // Reset selection state
-                highlightSquare(prevRow, prevCol, false);
-                selectedSquare = null;
-
-                // Pass the turn
-                currentTurn = currentTurn === 'white' ? 'black' : 'white';
-                turnIndicator.textContent = `${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)}'s Turn`;
-                
-                // Re-render board to show changes
-                renderBoard();
+        function increaseSpeed() {
+            // Gradually speed up game loops as the score climbs
+            if (score % 30 === 0 && gameSpeed < 20) {
+                gameSpeed += 1;
+                clearInterval(gameInterval);
+                gameInterval = setInterval(gameLoop, 1000 / gameSpeed);
             }
         }
 
-        function highlightSquare(row, col, shouldHighlight) {
-            const squares = document.querySelectorAll('.square');
-            squares.forEach(sq => {
-                if (parseInt(sq.dataset.row) === row && parseInt(sq.dataset.col) === col) {
-                    if (shouldHighlight) {
-                        sq.classList.add('selected');
-                    } else {
-                        sq.classList.remove('selected');
-                    }
-                }
+        function drawGrid() {
+            // Clear canvas background
+            ctx.fillStyle = "#2f3542";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Apple
+            ctx.fillStyle = "#ff4757"; // Radiant red
+            ctx.beginPath();
+            ctx.arc(apple.x + gridSize/2, apple.y + gridSize/2, gridSize/2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw Snake
+            snake.forEach((segment, index) => {
+                const isHead = index === 0;
+                ctx.fillStyle = isHead ? "#2ed573" : "#7bed9f"; // Head is a darker green than body
+                ctx.fillRect(segment.x + 1, segment.y + 1, gridSize - 2, gridSize - 2); // -2 gives spacing borders
             });
         }
 
-        // Kickstart the game
-        renderBoard();
+        function endGame() {
+            gameOver = true;
+            clearInterval(gameInterval);
+            
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem("snakeHighScore", highScore);
+                highScoreElement.textContent = highScore;
+            }
+
+            // Draw overlay text overlay
+            ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = "#ff4757";
+            ctx.font = "bold 30px 'Segoe UI'";
+            ctx.textAlign = "center";
+            ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 10);
+
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "16px 'Segoe UI'";
+            ctx.fillText("Press Spacebar to Play Again", canvas.width / 2, canvas.height / 2 + 30);
+        }
+
+        // Keyboard inputs
+        window.addEventListener("keydown", e => {
+            switch(e.key) {
+                case "ArrowUp":
+                    if (dy === 0) { dx = 0; dy = -gridSize; } // Prevent moving into yourself reversed
+                    break;
+                case "ArrowDown":
+                    if (dy === 0) { dx = 0; dy = gridSize; }
+                    break;
+                case "ArrowLeft":
+                    if (dx === 0) { dx = -gridSize; dy = 0; }
+                    break;
+                case "ArrowRight":
+                    if (dx === 0) { dx = gridSize; dy = 0; }
+                    break;
+                case " ": // Spacebar map
+                    if (gameOver) {
+                        resetGame();
+                    }
+                    break;
+            }
+        });
     </script>
 </body>
 </html>
