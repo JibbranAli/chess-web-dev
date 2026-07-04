@@ -3,304 +3,406 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jump & Avoid Game</title>
+    <title>Jenkins Dance Party & DevOps Therapy</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1e222b;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            overflow: hidden;
+        :root {
+            --bg-color: #1e1e2f;
+            --card-bg: #2a2a40;
+            --jenkins-red: #d9534f;
+            --jenkins-blue: #4a90e2;
+            --jenkins-green: #5cb85c;
+            --text-color: #f5f5f5;
         }
 
-        .game-container {
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
             text-align: center;
-            position: relative;
+            margin-top: 2rem;
         }
 
         h1 {
-            margin: 0 0 5px 0;
-            font-size: 2.2rem;
-            color: #4cd137;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            color: #ffb703;
+            text-shadow: 0 0 10px rgba(255, 183, 3, 0.3);
         }
 
-        .score-board {
-            font-size: 1.2rem;
-            margin-bottom: 15px;
-            font-weight: bold;
+        p {
+            color: #a0a0c0;
+            font-size: 1.1rem;
         }
 
-        #score {
-            color: #eccc68;
-        }
-
-        #canvas-wrapper {
+        /* The Butler Container */
+        .stage {
             position: relative;
-            display: inline-block;
-        }
-
-        canvas {
-            background-color: #2f3542;
-            border: 4px solid #747d8c;
-            border-radius: 6px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            display: block;
-        }
-
-        /* Overlay UI button styling */
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            width: 300px;
+            height: 350px;
+            margin: 2rem auto;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            background-color: rgba(0, 0, 0, 0.5);
-            border-radius: 6px;
-            transition: background-color 0.3s;
+            cursor: pointer;
         }
 
-        .start-btn {
-            background-color: #4cd137;
+        /* Jenkins Cartoon Representation */
+        .jenkins-butler {
+            width: 180px;
+            height: 240px;
+            background: #f4f4f4;
+            border-radius: 90px 90px 40px 40px;
+            position: relative;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5), inset 0 -10px 20px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+            border: 4px solid #333;
+        }
+
+        /* Face Details */
+        .face {
+            position: absolute;
+            top: 40px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .eyes {
+            display: flex;
+            gap: 30px;
+        }
+
+        .eye {
+            width: 20px;
+            height: 20px;
+            background: #333;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .mustache {
+            width: 80px;
+            height: 20px;
+            background: #333;
+            border-radius: 20px;
+            margin-top: 15px;
+            position: relative;
+            transition: 0.3s;
+        }
+
+        /* Suit / Red Tie */
+        .suit {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 100px;
+            background: #333;
+            border-radius: 0 0 35px 35px;
+            overflow: hidden;
+        }
+
+        .shirt {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 30px solid transparent;
+            border-right: 30px solid transparent;
+            border-top: 40px solid #fff;
+        }
+
+        .tie {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 60px solid var(--jenkins-red);
+        }
+
+        /* --- DANCE ANIMATIONS --- */
+        .dance-spin {
+            animation: spin 0.6s ease-in-out;
+        }
+
+        .dance-shake {
+            animation: shake 0.5s infinite alternate;
+        }
+
+        .chaos-mode {
+            animation: chaos 0.3s infinite alternate linear !important;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.2); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        @keyframes shake {
+            0% { transform: translateY(0) rotate(-5deg); }
+            100% { transform: translateY(-20px) rotate(5deg); }
+        }
+
+        @keyframes chaos {
+            0% { transform: translate(5px, 5px) rotate(5deg) scale(1.1); background: #ff4757;}
+            100% { transform: translate(-5px, -5px) rotate(-5deg) scale(1.1); background: #2ed573;}
+        }
+
+        /* Control Panel */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            z-index: 10;
+        }
+
+        button {
+            background-color: var(--jenkins-blue);
             color: white;
             border: none;
-            padding: 12px 30px;
-            font-size: 1.2rem;
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
             font-weight: bold;
             border-radius: 25px;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(76, 209, 55, 0.4);
-            transition: transform 0.1s, background-color 0.2s;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
-        .start-btn:hover {
-            background-color: #44bd32;
-            transform: scale(1.05);
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
         }
 
-        .start-btn:active {
-            transform: scale(0.98);
+        button.panic {
+            background-color: var(--jenkins-red);
         }
 
-        .hint {
-            margin-top: 15px;
+        button.panic:hover {
+            box-shadow: 0 6px 20px rgba(217, 83, 79, 0.4);
+        }
+
+        /* Interactive Trash Zone / Therapy Zone */
+        .therapy-zone {
+            width: 80%;
+            max-width: 600px;
+            background: var(--card-bg);
+            border: 2px dashed #444;
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            position: relative;
+            min-height: 150px;
+            margin-bottom: 3rem;
+        }
+
+        /* Draggable Bad Builds */
+        .failed-build {
+            display: inline-block;
+            background: var(--jenkins-red);
+            padding: 8px 15px;
+            border-radius: 5px;
+            margin: 5px;
+            cursor: grab;
+            font-weight: bold;
             font-size: 0.9rem;
-            color: #a4b0be;
+            user-select: none;
+            position: relative;
+        }
+
+        .failed-build:active {
+            cursor: grabbing;
+        }
+
+        .floating-text {
+            position: absolute;
+            font-weight: bold;
+            color: #5cb85c;
+            animation: floatUp 1s forwards ease-out;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-80px) scale(1.5); opacity: 0; }
         }
     </style>
 </head>
 <body>
 
-    <div class="game-container">
-        <h1>JUMP!</h1>
-        <div class="score-board">Score: <span id="score">0</span></div>
-        
-        <div id="canvas-wrapper">
-            <canvas id="gameCanvas" width="600" height="250"></canvas>
-            
-            <div id="ui-layer">
-                <button id="actionBtn" class="start-btn" onclick="startGame()">START GAME</button>
+    <header>
+        <h1>The Jenkins Dance Pipeline</h1>
+        <p>Your build passed! Click Jenkins to make him celebrate, or break the pipeline intentionally.</p>
+    </header>
+
+    <div class="stage" id="stage">
+        <div class="jenkins-butler" id="butler">
+            <div class="face">
+                <div class="eyes">
+                    <div class="eye"></div>
+                    <div class="eye"></div>
+                </div>
+                <div class="mustache" id="mustache"></div>
+            </div>
+            <div class="suit">
+                <div class="shirt"></div>
+                <div class="tie"></div>
             </div>
         </div>
-        
-        <div class="hint">Press Spacebar or Click Screen to Jump</div>
+    </div>
+
+    <div class="controls">
+        <button id="danceBtn">🕺 Shake It!</button>
+        <button id="spinBtn">🌀 Spin Cycle</button>
+        <button id="chaosBtn" class="panic">🔥 DEPLOY ON FRIDAY (CHAOS)</button>
+    </div>
+
+    <div class="therapy-zone">
+        <h3>DevOps Anger Management</h3>
+        <p style="font-size: 0.9rem; color: #888;">Click these broken build logs to instantly delete them from existence!</p>
+        <div id="buildContainer">
+            <span class="failed-build">❌ NullPointerException: line 42</span>
+            <span class="failed-build">❌ Docker daemon died unexpectedly</span>
+            <span class="failed-build">❌ OutOfMemoryError</span>
+            <span class="failed-build">❌ YAML Indentation Error</span>
+            <span class="failed-build">❌ Someone merged directly to main</span>
+        </div>
     </div>
 
     <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const scoreElement = document.getElementById("score");
-        const uiLayer = document.getElementById("ui-layer");
-        const actionBtn = document.getElementById("actionBtn");
+        const butler = document.getElementById('butler');
+        const mustache = document.getElementById('mustache');
+        const stage = document.getElementById('stage');
+        const buildContainer = document.getElementById('buildContainer');
 
-        // Game Configuration & States
-        let gameRunning = false;
-        let score = 0;
-        let animationFrameId;
-
-        // Physics constants
-        const gravity = 0.6;
-        const groundY = canvas.height - 40; // Floor platform location
-
-        // Player Object
-        const player = {
-            x: 50,
-            y: groundY - 40,
-            width: 30,
-            height: 40,
-            velocityY: 0,
-            isJumping: false,
-            jumpForce: -12,
+        // Sounds using browser Web Audio API synthesized live (No external links required!)
+        function playTone(freq, type, duration) {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
             
-            draw() {
-                ctx.fillStyle = "#4cd137"; // Neon Green player
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-            },
+            oscillator.type = type;
+            oscillator.frequency.value = freq;
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
             
-            update() {
-                // Apply Gravity physics
-                this.velocityY += gravity;
-                this.y += this.velocityY;
-
-                // Stop falling when touching the ground floor level
-                if (this.y >= groundY - this.height) {
-                    this.y = groundY - this.height;
-                    this.velocityY = 0;
-                    this.isJumping = false;
-                }
-            },
-            
-            jump() {
-                if (!this.isJumping) {
-                    this.velocityY = this.jumpForce;
-                    this.isJumping = true;
-                }
-            }
-        };
-
-        // Obstacle tracking array
-        let obstacles = [];
-        let obstacleTimer = 0;
-        let obstacleSpeed = 5;
-
-        class Obstacle {
-            constructor() {
-                this.width = 20 + Math.random() * 15;   // Random width
-                this.height = 30 + Math.random() * 30;  // Random heights
-                this.x = canvas.width;
-                this.y = groundY - this.height;
-            }
-
-            draw() {
-                ctx.fillStyle = "#ff4757"; // Coral red obstacles
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-            }
-
-            update() {
-                this.x -= obstacleSpeed;
-            }
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + duration);
         }
 
-        function startGame() {
-            // Hide menu overlay UI
-            uiLayer.style.display = "none";
+        // Click on Jenkins directly
+        butler.addEventListener('click', () => {
+            playTone(523.25, 'square', 0.15); // C5 note
+            setTimeout(() => playTone(659.25, 'square', 0.15), 100); // E5 note
             
-            // Reset configurations
-            score = 0;
-            obstacleSpeed = 5;
-            obstacles = [];
-            obstacleTimer = 0;
-            player.y = groundY - player.height;
-            player.velocityY = 0;
-            player.isJumping = false;
-            scoreElement.textContent = score;
+            // Pop up a random success message
+            createFloatingText("SUCCESS!", stage);
             
-            gameRunning = true;
-            
-            // Run the game loop
-            cancelAnimationFrame(animationFrameId);
-            gameLoop();
+            // Trigger quick click reaction
+            butler.style.transform = "scale(0.8) translateY(20px)";
+            mustache.style.transform = "scaleY(0.3)";
+            setTimeout(() => {
+                butler.style.transform = "scale(1)";
+                mustache.style.transform = "scaleY(1)";
+            }, 150);
+        });
+
+        // Button 1: Shake
+        document.getElementById('danceBtn').addEventListener('click', () => {
+            clearAnimations();
+            butler.classList.add('dance-shake');
+            playTone(220, 'sawtooth', 0.5);
+        });
+
+        // Button 2: Spin
+        document.getElementById('spinBtn').addEventListener('click', () => {
+            clearAnimations();
+            butler.classList.add('dance-spin');
+            playTone(880, 'sine', 0.6);
+            setTimeout(() => butler.classList.remove('dance-spin'), 600);
+        });
+
+        // Button 3: Chaos Mode
+        let chaosInterval;
+        document.getElementById('chaosBtn').addEventListener('click', function() {
+            if (butler.classList.contains('chaos-mode')) {
+                clearAnimations();
+                this.textContent = "🔥 DEPLOY ON FRIDAY (CHAOS)";
+                clearInterval(chaosInterval);
+            } else {
+                clearAnimations();
+                butler.classList.add('chaos-mode');
+                this.textContent = "🛑 STOP THE PRODUCTION FIRE!!";
+                
+                // Continuous annoying alarm sound
+                chaosInterval = setInterval(() => {
+                    playTone(150, 'sawtooth', 0.1);
+                    createFloatingText("🚨 500 ERROR!", stage);
+                }, 200);
+            }
+        });
+
+        function clearAnimations() {
+            butler.classList.remove('dance-shake', 'dance-spin', 'chaos-mode');
+            clearInterval(chaosInterval);
+            document.getElementById('chaosBtn').textContent = "🔥 DEPLOY ON FRIDAY (CHAOS)";
         }
 
-        function gameLoop() {
-            if (!gameRunning) return;
+        // Floating Text generator
+        function createFloatingText(text, parent) {
+            const txt = document.createElement('div');
+            txt.className = 'floating-text';
+            txt.innerText = text;
+            txt.style.left = Math.random() * 60 + 20 + '%';
+            txt.style.top = Math.random() * 40 + 20 + '%';
+            parent.appendChild(txt);
+            setTimeout(() => txt.remove(), 1000);
+        }
 
-            // 1. Clear Screen
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // 2. Draw Floor Platform
-            ctx.fillStyle = "#747d8c";
-            ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
-
-            // 3. Update & Draw Player
-            player.update();
-            player.draw();
-
-            // 4. Handle Spawning Obstacles dynamically over frames
-            obstacleTimer++;
-            if (obstacleTimer > (80 + Math.random() * 40)) { // Random delay between spawns
-                obstacles.push(new Obstacle());
-                obstacleTimer = 0;
-            }
-
-            // 5. Update and Draw active obstacles
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                obstacles[i].update();
-                obstacles[i].draw();
-
-                // Check for rectangle overlap hitboxes (Collisions)
-                if (
-                    player.x < obstacles[i].x + obstacles[i].width &&
-                    player.x + player.width > obstacles[i].x &&
-                    player.y < obstacles[i].y + obstacles[i].height &&
-                    player.y + player.height > obstacles[i].y
-                ) {
-                    gameOver();
-                    return;
-                }
-
-                // Remove obstacle if it travels past the left edge, award points
-                if (obstacles[i].x + obstacles[i].width < 0) {
-                    obstacles.splice(i, 1);
-                    score += 1;
-                    scoreElement.textContent = score;
-
-                    // Gradually speed up game as points stack up
-                    if (score % 5 === 0 && obstacleSpeed < 12) {
-                        obstacleSpeed += 0.5;
+        // Click to destroy broken builds interaction
+        buildContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('failed-build')) {
+                playTone(120, 'triangle', 0.3); // Heavy thud sound
+                
+                // Spawn a success popup where the failure was
+                const rect = e.target.getBoundingClientRect();
+                createFloatingText("🔨 FIXED!", buildContainer);
+                
+                // Animate out and remove
+                e.target.style.transition = 'all 0.3s';
+                e.target.style.transform = 'scale(0) rotate(45deg)';
+                setTimeout(() => {
+                    e.target.remove();
+                    // If all deleted, award a prize
+                    if(buildContainer.children.length === 0) {
+                        buildContainer.innerHTML = '<b style="color:var(--jenkins-green)">🎉 Clean Console Logs! Jenkins is proud of you.</b>';
+                        playTone(523, 'sine', 0.1);
+                        playTone(659, 'sine', 0.1);
+                        playTone(784, 'sine', 0.3);
                     }
-                }
-            }
-
-            animationFrameId = requestAnimationFrame(gameLoop);
-        }
-
-        function gameOver() {
-            gameRunning = false;
-            
-            // Re-show menu layer configuration as Game Over
-            uiLayer.style.display = "flex";
-            uiLayer.style.backgroundColor = "rgba(255, 71, 87, 0.4)"; // Tint overlay reddish
-            actionBtn.textContent = "RESTART GAME";
-            actionBtn.style.backgroundColor = "#ff4757";
-            actionBtn.style.boxShadow = "0 4px 15px rgba(255, 71, 87, 0.4)";
-        }
-
-        // --- Controls System Hookups ---
-
-        // Listen for Keyboard commands
-        window.addEventListener("keydown", (e) => {
-            if (e.key === " " || e.key === "ArrowUp") {
-                e.preventDefault(); // Stop window space bar page-scrolling defaults
-                if (gameRunning) {
-                    player.jump();
-                } else if (uiLayer.style.display !== "none") {
-                    startGame(); // Start if menu active
-                }
+                }, 300);
             }
         });
-
-        // Listen for Click / Touch screen gestures on Canvas zone
-        canvas.addEventListener("mousedown", () => {
-            if (gameRunning) player.jump();
-        });
-        canvas.addEventListener("touchstart", (e) => {
-            e.preventDefault();
-            if (gameRunning) player.jump();
-        });
-
-        // Render initial aesthetic canvas landscape scene before start triggers
-        ctx.fillStyle = "#747d8c";
-        ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
-        player.draw();
     </script>
 </body>
 </html>
