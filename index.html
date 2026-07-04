@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Single-File Chess Game</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #2f3542;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .game-container {
+            text-align: center;
+        }
+
+        h2 {
+            margin-bottom: 5px;
+        }
+
+        #turn-indicator {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #f1f2f6;
+        }
+
+        #chessboard {
+            display: grid;
+            grid-template-columns: repeat(8, 70px);
+            grid-template-rows: repeat(8, 70px);
+            border: 4px solid #1e222b;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .square {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+
+        /* Board Colors */
+        .light {
+            background-color: #f0d9b5;
+        }
+
+        .dark {
+            background-color: #b58863;
+        }
+
+        /* States */
+        .square.selected {
+            background-color: #7ab873 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h2>Chess Game</h2>
+        <div id="turn-indicator">White's Turn</div>
+        <div id="chessboard"></div>
+    </div>
+
+    <script>
+        // Initial board setup layout
+        const initialBoard = [
+            ['♜', '♞', '♝', '♛', '♚', '♝', '♞', '♜'], // Row 0 (Black pieces)
+            ['♟', '♟', '♟', '♟', '♟', '♟', '♟', '♟'], // Row 1
+            ['', '', '', '', '', '', '', ''],         // Row 2
+            ['', '', '', '', '', '', '', ''],         // Row 3
+            ['', '', '', '', '', '', '', ''],         // Row 4
+            ['', '', '', '', '', '', '', ''],         // Row 5
+            ['♙', '♙', '♙', '♙', '♙', '♙', '♙', '♙'], // Row 6
+            ['♖', '♘', '♗', '♕', '♔', '♗', '♘', '♖']  // Row 7 (White pieces)
+        ];
+
+        // Tracking state
+        let boardState = JSON.parse(JSON.stringify(initialBoard));
+        let currentTurn = 'white'; 
+        let selectedSquare = null;
+
+        const chessboardElement = document.getElementById('chessboard');
+        const turnIndicator = document.getElementById('turn-indicator');
+
+        // Helper to determine piece color
+        function getPieceColor(piece) {
+            if (!piece) return null;
+            const whitePieces = ['♙', '♖', '♘', '♗', '♕', '♔'];
+            return whitePieces.includes(piece) ? 'white' : 'black';
+        }
+
+        // Generate board elements inside DOM
+        function renderBoard() {
+            chessboardElement.innerHTML = '';
+            
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const square = document.createElement('div');
+                    square.classList.add('square');
+                    
+                    // Alternating tile backgrounds
+                    if ((row + col) % 2 === 0) {
+                        square.classList.add('light');
+                    } else {
+                        square.classList.add('dark');
+                    }
+                    
+                    // Set dataset attributes for tracking coordinates
+                    square.dataset.row = row;
+                    square.dataset.col = col;
+                    
+                    // Inject piece symbols
+                    square.textContent = boardState[row][col];
+                    
+                    // Apply text colors based on team
+                    if (getPieceColor(boardState[row][col]) === 'white') {
+                        square.style.color = '#ffffff'; 
+                        square.style.filter = 'drop-shadow(0px 2px 2px rgba(0,0,0,0.6))';
+                    } else if (getPieceColor(boardState[row][col]) === 'black') {
+                        square.style.color = '#000000';
+                    }
+
+                    // Click Handler
+                    square.addEventListener('click', () => handleSquareClick(row, col));
+                    
+                    chessboardElement.appendChild(square);
+                }
+            }
+        }
+
+        function handleSquareClick(row, col) {
+            const piece = boardState[row][col];
+            const pieceColor = getPieceColor(piece);
+
+            // 1. If no piece is currently selected
+            if (selectedSquare === null) {
+                if (piece && pieceColor === currentTurn) {
+                    selectedSquare = { row, col };
+                    highlightSquare(row, col, true);
+                }
+            } 
+            // 2. If a piece is already selected
+            else {
+                const prevRow = selectedSquare.row;
+                const prevCol = selectedSquare.col;
+
+                // If clicking the same team piece, switch selection to that piece instead
+                if (piece && pieceColor === currentTurn) {
+                    highlightSquare(prevRow, prevCol, false);
+                    selectedSquare = { row, col };
+                    highlightSquare(row, col, true);
+                    return;
+                }
+
+                // If clicking the exact same square, deselect it
+                if (prevRow === row && prevCol === col) {
+                    highlightSquare(prevRow, prevCol, false);
+                    selectedSquare = null;
+                    return;
+                }
+
+                // Execute Move
+                boardState[row][col] = boardState[prevRow][prevCol];
+                boardState[prevRow][prevCol] = '';
+                
+                // Reset selection state
+                highlightSquare(prevRow, prevCol, false);
+                selectedSquare = null;
+
+                // Pass the turn
+                currentTurn = currentTurn === 'white' ? 'black' : 'white';
+                turnIndicator.textContent = `${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)}'s Turn`;
+                
+                // Re-render board to show changes
+                renderBoard();
+            }
+        }
+
+        function highlightSquare(row, col, shouldHighlight) {
+            const squares = document.querySelectorAll('.square');
+            squares.forEach(sq => {
+                if (parseInt(sq.dataset.row) === row && parseInt(sq.dataset.col) === col) {
+                    if (shouldHighlight) {
+                        sq.classList.add('selected');
+                    } else {
+                        sq.classList.remove('selected');
+                    }
+                }
+            });
+        }
+
+        // Kickstart the game
+        renderBoard();
+    </script>
+</body>
+</html>
