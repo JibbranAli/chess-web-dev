@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro Snake Game</title>
+    <title>Jump & Avoid Game</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -20,14 +20,13 @@
 
         .game-container {
             text-align: center;
+            position: relative;
         }
 
         h1 {
-            margin: 0 0 10px 0;
-            font-size: 2.5rem;
-            letter-spacing: 2px;
+            margin: 0 0 5px 0;
+            font-size: 2.2rem;
             color: #4cd137;
-            text-shadow: 0 0 10px rgba(76, 209, 55, 0.4);
         }
 
         .score-board {
@@ -37,22 +36,61 @@
         }
 
         #score {
-            color: #4cd137;
+            color: #eccc68;
         }
 
-        #high-score {
-            color: #eccc68;
-            margin-left: 20px;
+        #canvas-wrapper {
+            position: relative;
+            display: inline-block;
         }
 
         canvas {
             background-color: #2f3542;
             border: 4px solid #747d8c;
+            border-radius: 6px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            border-radius: 4px;
+            display: block;
         }
 
-        .controls-hint {
+        /* Overlay UI button styling */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 6px;
+            transition: background-color 0.3s;
+        }
+
+        .start-btn {
+            background-color: #4cd137;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(76, 209, 55, 0.4);
+            transition: transform 0.1s, background-color 0.2s;
+        }
+
+        .start-btn:hover {
+            background-color: #44bd32;
+            transform: scale(1.05);
+        }
+
+        .start-btn:active {
+            transform: scale(0.98);
+        }
+
+        .hint {
             margin-top: 15px;
             font-size: 0.9rem;
             color: #a4b0be;
@@ -62,203 +100,207 @@
 <body>
 
     <div class="game-container">
-        <h1>SNAKE</h1>
-        <div class="score-board">
-            Score: <span id="score">0</span>
-            High Score: <span id="high-score">0</span>
+        <h1>JUMP!</h1>
+        <div class="score-board">Score: <span id="score">0</span></div>
+        
+        <div id="canvas-wrapper">
+            <canvas id="gameCanvas" width="600" height="250"></canvas>
+            
+            <div id="ui-layer">
+                <button id="actionBtn" class="start-btn" onclick="startGame()">START GAME</button>
+            </div>
         </div>
-        <canvas id="gameCanvas" width="400" height="400"></canvas>
-        <div class="controls-hint">Use Arrow Keys to Move. Press Space to Restart if you crash.</div>
+        
+        <div class="hint">Press Spacebar or Click Screen to Jump</div>
     </div>
 
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const scoreElement = document.getElementById("score");
-        const highScoreElement = document.getElementById("high-score");
+        const uiLayer = document.getElementById("ui-layer");
+        const actionBtn = document.getElementById("actionBtn");
 
-        // Grid size configuration
-        const gridSize = 20; 
-        const tileCount = canvas.width / gridSize;
-
-        // Game speed variables
-        const initialSpeed = 7; // frames per second (lower = slower)
-        let gameSpeed = initialSpeed;
-
-        // Game states
-        let snake = [];
-        let apple = { x: 0, y: 0 };
-        let dx = gridSize; // horizontal velocity
-        let dy = 0;        // vertical velocity
+        // Game Configuration & States
+        let gameRunning = false;
         let score = 0;
-        let highScore = localStorage.getItem("snakeHighScore") || 0;
-        let gameOver = false;
-        let gameInterval;
+        let animationFrameId;
 
-        highScoreElement.textContent = highScore;
+        // Physics constants
+        const gravity = 0.6;
+        const groundY = canvas.height - 40; // Floor platform location
 
-        // Start the game setup
-        resetGame();
+        // Player Object
+        const player = {
+            x: 50,
+            y: groundY - 40,
+            width: 30,
+            height: 40,
+            velocityY: 0,
+            isJumping: false,
+            jumpForce: -12,
+            
+            draw() {
+                ctx.fillStyle = "#4cd137"; // Neon Green player
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            },
+            
+            update() {
+                // Apply Gravity physics
+                this.velocityY += gravity;
+                this.y += this.velocityY;
 
-        function resetGame() {
-            // Spawn snake in the middle moving right
-            snake = [
-                { x: gridSize * 5, y: gridSize * 10 },
-                { x: gridSize * 4, y: gridSize * 10 },
-                { x: gridSize * 3, y: gridSize * 10 }
-            ];
-            dx = gridSize;
-            dy = 0;
+                // Stop falling when touching the ground floor level
+                if (this.y >= groundY - this.height) {
+                    this.y = groundY - this.height;
+                    this.velocityY = 0;
+                    this.isJumping = false;
+                }
+            },
+            
+            jump() {
+                if (!this.isJumping) {
+                    this.velocityY = this.jumpForce;
+                    this.isJumping = true;
+                }
+            }
+        };
+
+        // Obstacle tracking array
+        let obstacles = [];
+        let obstacleTimer = 0;
+        let obstacleSpeed = 5;
+
+        class Obstacle {
+            constructor() {
+                this.width = 20 + Math.random() * 15;   // Random width
+                this.height = 30 + Math.random() * 30;  // Random heights
+                this.x = canvas.width;
+                this.y = groundY - this.height;
+            }
+
+            draw() {
+                ctx.fillStyle = "#ff4757"; // Coral red obstacles
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+
+            update() {
+                this.x -= obstacleSpeed;
+            }
+        }
+
+        function startGame() {
+            // Hide menu overlay UI
+            uiLayer.style.display = "none";
+            
+            // Reset configurations
             score = 0;
-            gameSpeed = initialSpeed;
+            obstacleSpeed = 5;
+            obstacles = [];
+            obstacleTimer = 0;
+            player.y = groundY - player.height;
+            player.velocityY = 0;
+            player.isJumping = false;
             scoreElement.textContent = score;
-            gameOver = false;
             
-            spawnApple();
+            gameRunning = true;
             
-            clearInterval(gameInterval);
-            gameInterval = setInterval(gameLoop, 1000 / gameSpeed);
+            // Run the game loop
+            cancelAnimationFrame(animationFrameId);
+            gameLoop();
         }
 
         function gameLoop() {
-            if (gameOver) return;
+            if (!gameRunning) return;
 
-            updateSnakePosition();
-            if (checkCollision()) {
-                endGame();
-                return;
-            }
-            checkAppleConsumption();
-            drawGrid();
-        }
+            // 1. Clear Screen
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        function updateSnakePosition() {
-            // Create a new head based on velocity direction
-            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
-            snake.unshift(head); // Add new head to front
-            snake.pop();         // Remove tail to keep length consistent unless apple is eaten
-        }
+            // 2. Draw Floor Platform
+            ctx.fillStyle = "#747d8c";
+            ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
 
-        function checkCollision() {
-            const head = snake[0];
+            // 3. Update & Draw Player
+            player.update();
+            player.draw();
 
-            // Wall Collisions
-            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
-                return true;
+            // 4. Handle Spawning Obstacles dynamically over frames
+            obstacleTimer++;
+            if (obstacleTimer > (80 + Math.random() * 40)) { // Random delay between spawns
+                obstacles.push(new Obstacle());
+                obstacleTimer = 0;
             }
 
-            // Self Collisions (skip checking index 0 which is the head itself)
-            for (let i = 1; i < snake.length; i++) {
-                if (head.x === snake[i].x && head.y === snake[i].y) {
-                    return true;
+            // 5. Update and Draw active obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].update();
+                obstacles[i].draw();
+
+                // Check for rectangle overlap hitboxes (Collisions)
+                if (
+                    player.x < obstacles[i].x + obstacles[i].width &&
+                    player.x + player.width > obstacles[i].x &&
+                    player.y < obstacles[i].y + obstacles[i].height &&
+                    player.y + player.height > obstacles[i].y
+                ) {
+                    gameOver();
+                    return;
                 }
-            }
-            return false;
-        }
 
-        function checkAppleConsumption() {
-            const head = snake[0];
-            if (head.x === apple.x && head.y === apple.y) {
-                score += 10;
-                scoreElement.textContent = score;
-                
-                // Grow snake by restoring the popped tail spot implicitly
-                // dynamically pushing a clone of the last segment
-                snake.push({ ...snake[snake.length - 1] });
-                
-                spawnApple();
-                increaseSpeed();
-            }
-        }
+                // Remove obstacle if it travels past the left edge, award points
+                if (obstacles[i].x + obstacles[i].width < 0) {
+                    obstacles.splice(i, 1);
+                    score += 1;
+                    scoreElement.textContent = score;
 
-        function spawnApple() {
-            // Generate a random spot inside grid boundaries
-            apple.x = Math.floor(Math.random() * tileCount) * gridSize;
-            apple.y = Math.floor(Math.random() * tileCount) * gridSize;
-
-            // Prevent apple from spawning right on top of the snake body
-            for (let segment of snake) {
-                if (apple.x === segment.x && apple.y === segment.y) {
-                    spawnApple();
-                    break;
-                }
-            }
-        }
-
-        function increaseSpeed() {
-            // Gradually speed up game loops as the score climbs
-            if (score % 30 === 0 && gameSpeed < 20) {
-                gameSpeed += 1;
-                clearInterval(gameInterval);
-                gameInterval = setInterval(gameLoop, 1000 / gameSpeed);
-            }
-        }
-
-        function drawGrid() {
-            // Clear canvas background
-            ctx.fillStyle = "#2f3542";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Draw Apple
-            ctx.fillStyle = "#ff4757"; // Radiant red
-            ctx.beginPath();
-            ctx.arc(apple.x + gridSize/2, apple.y + gridSize/2, gridSize/2 - 2, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Draw Snake
-            snake.forEach((segment, index) => {
-                const isHead = index === 0;
-                ctx.fillStyle = isHead ? "#2ed573" : "#7bed9f"; // Head is a darker green than body
-                ctx.fillRect(segment.x + 1, segment.y + 1, gridSize - 2, gridSize - 2); // -2 gives spacing borders
-            });
-        }
-
-        function endGame() {
-            gameOver = true;
-            clearInterval(gameInterval);
-            
-            if (score > highScore) {
-                highScore = score;
-                localStorage.setItem("snakeHighScore", highScore);
-                highScoreElement.textContent = highScore;
-            }
-
-            // Draw overlay text overlay
-            ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.fillStyle = "#ff4757";
-            ctx.font = "bold 30px 'Segoe UI'";
-            ctx.textAlign = "center";
-            ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 10);
-
-            ctx.fillStyle = "#ffffff";
-            ctx.font = "16px 'Segoe UI'";
-            ctx.fillText("Press Spacebar to Play Again", canvas.width / 2, canvas.height / 2 + 30);
-        }
-
-        // Keyboard inputs
-        window.addEventListener("keydown", e => {
-            switch(e.key) {
-                case "ArrowUp":
-                    if (dy === 0) { dx = 0; dy = -gridSize; } // Prevent moving into yourself reversed
-                    break;
-                case "ArrowDown":
-                    if (dy === 0) { dx = 0; dy = gridSize; }
-                    break;
-                case "ArrowLeft":
-                    if (dx === 0) { dx = -gridSize; dy = 0; }
-                    break;
-                case "ArrowRight":
-                    if (dx === 0) { dx = gridSize; dy = 0; }
-                    break;
-                case " ": // Spacebar map
-                    if (gameOver) {
-                        resetGame();
+                    // Gradually speed up game as points stack up
+                    if (score % 5 === 0 && obstacleSpeed < 12) {
+                        obstacleSpeed += 0.5;
                     }
-                    break;
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            
+            // Re-show menu layer configuration as Game Over
+            uiLayer.style.display = "flex";
+            uiLayer.style.backgroundColor = "rgba(255, 71, 87, 0.4)"; // Tint overlay reddish
+            actionBtn.textContent = "RESTART GAME";
+            actionBtn.style.backgroundColor = "#ff4757";
+            actionBtn.style.boxShadow = "0 4px 15px rgba(255, 71, 87, 0.4)";
+        }
+
+        // --- Controls System Hookups ---
+
+        // Listen for Keyboard commands
+        window.addEventListener("keydown", (e) => {
+            if (e.key === " " || e.key === "ArrowUp") {
+                e.preventDefault(); // Stop window space bar page-scrolling defaults
+                if (gameRunning) {
+                    player.jump();
+                } else if (uiLayer.style.display !== "none") {
+                    startGame(); // Start if menu active
+                }
             }
         });
+
+        // Listen for Click / Touch screen gestures on Canvas zone
+        canvas.addEventListener("mousedown", () => {
+            if (gameRunning) player.jump();
+        });
+        canvas.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            if (gameRunning) player.jump();
+        });
+
+        // Render initial aesthetic canvas landscape scene before start triggers
+        ctx.fillStyle = "#747d8c";
+        ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+        player.draw();
     </script>
 </body>
 </html>
